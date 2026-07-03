@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Ledger</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap');
+
+  :root{
+    --cover: #5C1F2E;
+    --cover-dark: #451721;
+    --paper: #F6F1E4;
+    --paper-line: #D8CDB4;
+    --rule-sage: #A9BFA6;
+    --ink: #23241F;
+    --ink-soft: #6b6a5f;
+    --money-in: #3F6B4F;
+    --money-in-bg: #E7EFE4;
+    --money-out: #B5533C;
+    --money-out-bg: #F5E6DF;
+    --gold: #9C7A3C;
+    --gold-light: #E9DFC4;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--cover);
+    background-image:
+      radial-gradient(ellipse at top left, rgba(255,255,255,0.05), transparent 60%),
+      linear-gradient(180deg, var(--cover) 0%, var(--cover-dark) 100%);
+    font-family: 'Source Serif 4', serif;
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 28px 16px 60px;
+  }
+
+  .book {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .cover-title {
+    text-align: center;
+    color: var(--gold-light);
+    margin-bottom: 22px;
+  }
+  .cover-title .eyebrow {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .cover-title h1 {
+    font-size: 30px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+  .cover-title .sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: rgba(233,223,196,0.65);
+    margin-top: 6px;
+  }
+
+  .page {
+    background: var(--paper);
+    border-radius: 3px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    padding: 30px 26px 34px;
+    position: relative;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 30px,
+      var(--paper-line) 31px
+    );
+  }
+  .page::before {
+    content: '';
+    position: absolute;
+    left: 46px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--money-out);
+    opacity: 0.35;
+  }
+  .page-inner { margin-left: 34px; }
+
+  h2.section-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--paper-line);
+  }
+
+  /* Setup */
+  .setup-row {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  input, select {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    padding: 9px 10px;
+    border: 1px solid var(--paper-line);
+    border-radius: 2px;
+    background: #fffdf8;
+    color: var(--ink);
+    outline: none;
+  }
+  input:focus, select:focus { border-color: var(--gold); }
+  input[type="text"], input[type="number"], input[type="date"] { min-width: 140px; }
+
+  button {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    border-radius: 2px;
+    border: 1px solid var(--cover);
+    background: var(--cover);
+    color: var(--paper);
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease;
+  }
+  button:hover { background: var(--cover-dark); }
+  button:active { transform: scale(0.97); }
+  button.ghost {
+    background: transparent;
+    color: var(--cover);
+  }
+  button.ghost:hover { background: rgba(92,31,46,0.08); }
+  button.small { padding: 6px 10px; font-size: 10.5px; }
+  button.danger { border-color: var(--money-out); color: var(--money-out); background: transparent; }
+  button.danger:hover { background: var(--money-out-bg); }
+
+  /* Dashboard */
+  .ledger-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--paper-line);
+    border: 1px solid var(--paper-line);
+    margin-bottom: 4px;
+  }
+  .stat {
+    background: var(--paper);
+    padding: 14px 14px 16px;
+  }
+  .stat .label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .stat .value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 19px;
+    font-weight: 600;
+  }
+  .stat.highlight { background: var(--gold-light); }
+  .stat .value.pos { color: var(--money-in); }
+  .stat .value.neg { color: var(--money-out); }
+
+  /* Loan entries */
+  .loan-entry {
+    border: 1px solid var(--paper-line);
+    background: rgba(255,253,248,0.55);
+    padding: 16px 16px 14px;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .loan-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .loan-who {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .loan-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 3px;
+  }
+  .stamp {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border: 2px solid currentColor;
+    border-radius: 3px;
+    transform: rotate(-3deg);
+    white-space: nowrap;
+  }
+  .stamp.paid { color: var(--money-in); }
+  .stamp.partial { color: var(--gold); }
+  .stamp.outstanding { color: var(--money-out); }
+
+  .loan-figures {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--paper-line);
+  }
+  .fig .flabel {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .fig .fval {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14.5px;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .loan-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .subledger {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--paper-line);
+  }
+  .subledger-row {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 3px 0;
+    color: var(--ink-soft);
+  }
+  .subledger-row .amt.pos { color: var(--money-in); }
+
+  .inline-form {
+    display: none;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--gold-light);
+    border-radius: 2px;
+  }
+  .inline-form.open { display: flex; }
+
+  .withdrawal-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--paper-line);
+  }
+  .withdrawal-row:last-child { border-bottom: none; }
+  .withdrawal-row .amt { color: var(--money-out); font-weight: 600; }
+  .withdrawal-row .meta { color: var(--ink-soft); font-size: 11px; }
+
+  .empty-note {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-style: italic;
+    padding: 10px 0;
+  }
+
+  .page-gap { height: 18px; }
+
+  .footer-note {
+    text-align: center;
+    color: rgba(233,223,196,0.5);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    margin-top: 22px;
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 520px) {
+    .page { padding: 22px 14px 26px; }
+    .page::before { left: 30px; }
+    .page-inner { margin-left: 18px; }
+    .cover-title h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="book">
+  <div class="cover-title">
+    <span class="eyebrow">Personal Lending Record</span>
+    <h1>The Ledger</h1>
+    <div class="sub" id="dateLine"></div>
+  </div>
+
+  <!-- SETUP -->
+  <div class="page" id="setupPage">
+    <div class="page-inner">
+      <h2 class="section-title">01 — Opening the book</h2>
+      <div id="setupForm" class="setup-row">
+        <div class="field">
+          <label>Currency symbol</label>
+          <input type="text" id="currencySymbol" value="P" maxlength="4" style="min-width:70px">
+        </div>
+        <div class="field">
+          <label>Starting capital</label>
+          <input type="number" id="startCapital" placeholder="10000">
+        </div>
+        <div class="field">
+          <label>Date opened</label>
+          <input type="date" id="startDate">
+        </div>
+        <button onclick="openBook()">Open the book</button>
+      </div>
+      <div id="setupSummary" style="display:none">
+        <div class="setup-row" style="justify-content:space-between; align-items:center;">
+          <div class="fig">
+            <div class="flabel">Starting Capital</div>
+            <div class="fval" id="capitalDisplay"></div>
+          </div>
+          <button class="ghost small" onclick="editCapital()">Edit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-gap"></div>
+
+  <!-- DASHBOARD -->
+  <div class="page" id="dashboardPage" style="display:none">
+    <div class="page-inner">
+      <h2 class="section-title">02 — Where things stand</h2>
+      <div class="ledger-summary">
+        <div class="stat"><div class="label">Starting Capital</div><div class="value" id="statCapital">—</div></div>
+        <div class="stat"><div class="label">Out on Loan</div><div class="value" id="statOutOnLoan">—</div></div>
+        <div class="stat highlight"><div class="label">Cash Available</div><div class="value" id="statAvailable">—</div></div>
+        <div class="stat"><div class="label">Total Repaid</div><div class="value pos" id="statRepaid">—</div></div>
+        <div class="stat"><div class="label">Still Owed to You</div><div class="value neg" id="statOwed">—</div></div>
+        <div class="stat"><div class="label">Taken / Charges</div><div class="value neg" id="statWithdrawn">—</div></div>
+        <div class="stat highlight"><div class="label">Fund Net Worth</div><div class="value" id="statNetWorth">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-gap"></div>
+
+  <!-- LOANS -->
+  <div class="page" id="loansPage" style="display:none">
+    <div class="page-inner">
+      <h2 class="section-title">03 — Money lent out</h2>
+
+      <div class="setup-row" style="margin-bottom:16px;">
+        <button onclick="toggleForm('newLoanForm')">+ Record a new loan</button>
+      </div>
+
+      <div id="newLoanForm" class="inline-form">
+        <div class="field"><label>Borrower name</label><input type="text" id="loanName" placeholder="e.g. Tumelo" style="min-width:160px"></div>
+        <div class="field"><label>Date lent</label><input type="date" id="loanDate"></div>
+        <div class="field"><label>Amount lent</label><input type="number" id="loanAmount" placeholder="2000" style="min-width:110px"></div>
+        <div class="field">
+          <label>Interest</label>
+          <select id="loanInterestType">
+            <option value="flat">One-time %, fixed</option>
+            <option value="monthly">% per month, unpaid</option>
+            <option value="none">No interest</option>
+          </select>
+        </div>
+        <div class="field"><label>Rate (%)</label><input type="number" id="loanRate" placeholder="10" style="min-width:70px"></div>
+        <div class="field"><label>Note (optional)</label><input type="text" id="loanNote" placeholder="e.g. school fees" style="min-width:140px"></div>
+        <button onclick="addLoan()">Save loan</button>
+        <button class="ghost" onclick="toggleForm('newLoanForm')">Cancel</button>
+      </div>
+
+      <div id="loansList"></div>
+      <div id="loansEmpty" class="empty-note">No loans recorded yet. Every person you lend to will show up here as its own entry.</div>
+    </div>
+  </div>
+
+  <div class="page-gap"></div>
+
+  <!-- WITHDRAWALS -->
+  <div class="page" id="withdrawalsPage" style="display:none">
+    <div class="page-inner">
+      <h2 class="section-title">04 — Taken out of the pool</h2>
+      <p class="empty-note" style="font-style:normal; margin-top:-6px;">For when you take a cut for yourself, cover bank charges, or take money out for any other reason.</p>
+
+      <div class="setup-row" style="margin-bottom:16px;">
+        <button onclick="toggleForm('newWithdrawalForm')">+ Record money taken out</button>
+      </div>
+
+      <div id="newWithdrawalForm" class="inline-form">
+        <div class="field"><label>Date</label><input type="date" id="wDate"></div>
+        <div class="field"><label>Amount</label><input type="number" id="wAmount" placeholder="500" style="min-width:110px"></div>
+        <div class="field"><label>Reason</label><input type="text" id="wReason" placeholder="e.g. payment for myself" style="min-width:200px"></div>
+        <button onclick="addWithdrawal()">Save</button>
+        <button class="ghost" onclick="toggleForm('newWithdrawalForm')">Cancel</button>
+      </div>
+
+      <div id="withdrawalsList"></div>
+      <div id="withdrawalsEmpty" class="empty-note">Nothing taken out yet.</div>
+    </div>
+  </div>
+
+  <div class="page-gap"></div>
+
+  <div class="page" id="backupPage" style="display:none">
+    <div class="page-inner">
+      <h2 class="section-title">05 — Keeping a safe copy</h2>
+      <p class="empty-note" style="font-style:normal; margin-top:-6px; line-height:1.5;">
+        This ledger saves itself automatically in this browser, on this device, every time something changes — no internet needed. But if this browser's data is ever cleared, or you open the file on a different device, that saved copy won't follow you. Download a backup now and then, and keep the file somewhere safe (email it to yourself, save it to a USB stick, etc.).
+      </p>
+      <div class="setup-row">
+        <button onclick="downloadBackup()">Download backup</button>
+        <button class="ghost" onclick="triggerRestore()">Restore from backup</button>
+        <input type="file" id="restoreFileInput" accept="application/json" style="display:none" onchange="restoreBackup(event)">
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">Saved automatically in this browser · keep this file to reopen your ledger anytime</div>
+</div>
+
+<script>
+let state = {
+  currency: 'P',
+  startCapital: null,
+  startDate: null,
+  loans: [],       // {id, name, date, amount, interestType, rate, note, payments:[{id,date,amount,note}]}
+  withdrawals: []  // {id, date, amount, reason}
+};
+
+const STORAGE_KEY = 'ledger-state-v1';
+
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.error('save failed', e);
+    alert('Could not save. Your browser storage may be full or private-browsing mode may be blocking saving.');
+  }
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      state = Object.assign(state, JSON.parse(raw));
+    }
+  } catch (e) {
+    // no saved state yet
+  }
+  render();
+}
+
+function downloadBackup() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = 'ledger-backup-' + stamp + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function triggerRestore() {
+  document.getElementById('restoreFileInput').click();
+}
+
+function restoreBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const restored = JSON.parse(e.target.result);
+      if (!restored || typeof restored.startCapital === 'undefined') {
+        alert('This does not look like a valid ledger backup file.');
+        return;
+      }
+      if (!confirm('This will replace everything currently in the ledger with the backup file. Continue?')) return;
+      state = restored;
+      save();
+      render();
+      alert('Backup restored.');
+    } catch (err) {
+      alert('Could not read that file. Make sure it is a ledger backup (.json) file.');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function uid() { return Math.random().toString(36).slice(2, 10); }
+
+function fmt(n) {
+  const v = Number(n) || 0;
+  return state.currency + ' ' + v.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function toggleForm(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+// ---------- setup ----------
+function openBook() {
+  const cap = parseFloat(document.getElementById('startCapital').value);
+  const cur = document.getElementById('currencySymbol').value.trim() || 'P';
+  const date = document.getElementById('startDate').value || new Date().toISOString().slice(0,10);
+  if (isNaN(cap) || cap <= 0) { alert('Enter the amount you started with.'); return; }
+  state.startCapital = cap;
+  state.startDate = date;
+  state.currency = cur;
+  save();
+  render();
+}
+
+function editCapital() {
+  document.getElementById('setupSummary').style.display = 'none';
+  document.getElementById('setupForm').style.display = 'flex';
+  document.getElementById('startCapital').value = state.startCapital;
+  document.getElementById('currencySymbol').value = state.currency;
+  document.getElementById('startDate').value = state.startDate;
+}
+
+// ---------- loans ----------
+function addLoan() {
+  const name = document.getElementById('loanName').value.trim();
+  const date = document.getElementById('loanDate').value || new Date().toISOString().slice(0,10);
+  const amount = parseFloat(document.getElementById('loanAmount').value);
+  const interestType = document.getElementById('loanInterestType').value;
+  const rate = parseFloat(document.getElementById('loanRate').value) || 0;
+  const note = document.getElementById('loanNote').value.trim();
+
+  if (!name) { alert('Enter who you lent the money to.'); return; }
+  if (isNaN(amount) || amount <= 0) { alert('Enter how much you lent.'); return; }
+
+  state.loans.push({ id: uid(), name, date, amount, interestType, rate, note, payments: [] });
+
+  document.getElementById('loanName').value = '';
+  document.getElementById('loanAmount').value = '';
+  document.getElementById('loanRate').value = '';
+  document.getElementById('loanNote').value = '';
+  toggleForm('newLoanForm');
+  save();
+  render();
+}
+
+function removeLoan(id) {
+  if (!confirm('Remove this loan record? This cannot be undone.')) return;
+  state.loans = state.loans.filter(l => l.id !== id);
+  save();
+  render();
+}
+
+function monthsElapsed(dateStr) {
+  const start = new Date(dateStr);
+  const now = new Date();
+  let months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+  const dayDiff = (now.getTime() - start.getTime()) / (1000*60*60*24);
+  months = Math.max(0, Math.floor(dayDiff / 30));
+  return months;
+}
+
+function loanOwed(loan) {
+  // amount owed back (principal + interest), before subtracting payments
+  if (loan.interestType === 'none') return loan.amount;
+  if (loan.interestType === 'flat') return loan.amount * (1 + (loan.rate/100));
+  if (loan.interestType === 'monthly') {
+    const m = Math.max(1, monthsElapsed(loan.date) + 1); // at least the first month's interest applies
+    return loan.amount * (1 + (loan.rate/100) * m);
+  }
+  return loan.amount;
+}
+
+function loanPaid(loan) {
+  return loan.payments.reduce((s,p) => s + p.amount, 0);
+}
+
+function loanOutstanding(loan) {
+  return Math.max(0, loanOwed(loan) - loanPaid(loan));
+}
+
+function toggleLoanForm(loanId, kind) {
+  const el = document.getElementById(kind + '-' + loanId);
+  if (el) el.classList.toggle('open');
+}
+
+function addPayment(loanId) {
+  const loan = state.loans.find(l => l.id === loanId);
+  const amtInput = document.getElementById('payAmount-' + loanId);
+  const dateInput = document.getElementById('payDate-' + loanId);
+  const noteInput = document.getElementById('payNote-' + loanId);
+  const amount = parseFloat(amtInput.value);
+  if (isNaN(amount) || amount <= 0) { alert('Enter the amount paid.'); return; }
+  const date = dateInput.value || new Date().toISOString().slice(0,10);
+  loan.payments.push({ id: uid(), date, amount, note: noteInput.value.trim() });
+  amtInput.value = ''; noteInput.value = '';
+  save();
+  render();
+}
+
+function removePayment(loanId, paymentId) {
+  const loan = state.loans.find(l => l.id === loanId);
+  loan.payments = loan.payments.filter(p => p.id !== paymentId);
+  save();
+  render();
+}
+
+// ---------- withdrawals ----------
+function addWithdrawal() {
+  const date = document.getElementById('wDate').value || new Date().toISOString().slice(0,10);
+  const amount = parseFloat(document.getElementById('wAmount').value);
+  const reason = document.getElementById('wReason').value.trim();
+  if (isNaN(amount) || amount <= 0) { alert('Enter the amount taken.'); return; }
+  if (!reason) { alert('Add a short reason.'); return; }
+  state.withdrawals.push({ id: uid(), date, amount, reason });
+  document.getElementById('wAmount').value = '';
+  document.getElementById('wReason').value = '';
+  toggleForm('newWithdrawalForm');
+  save();
+  render();
+}
+
+function removeWithdrawal(id) {
+  state.withdrawals = state.withdrawals.filter(w => w.id !== id);
+  save();
+  render();
+}
+
+// ---------- totals ----------
+function computeTotals() {
+  const totalLentPrincipal = state.loans.reduce((s,l) => s + l.amount, 0);
+  const totalRepaid = state.loans.reduce((s,l) => s + loanPaid(l), 0);
+  const totalOwed = state.loans.reduce((s,l) => s + loanOutstanding(l), 0);
+  const totalWithdrawn = state.withdrawals.reduce((s,w) => s + w.amount, 0);
+  const available = (state.startCapital || 0) - totalLentPrincipal + totalRepaid - totalWithdrawn;
+  const netWorth = available + totalOwed;
+  return { totalLentPrincipal, totalRepaid, totalOwed, totalWithdrawn, available, netWorth };
+}
+
+// ---------- render ----------
+function render() {
+  document.getElementById('dateLine').textContent = new Date().toLocaleDateString(undefined, {year:'numeric', month:'long', day:'numeric'});
+
+  if (state.startCapital) {
+    document.getElementById('setupForm').style.display = 'none';
+    document.getElementById('setupSummary').style.display = 'block';
+    document.getElementById('capitalDisplay').textContent = fmt(state.startCapital) + '  (opened ' + state.startDate + ')';
+    document.getElementById('dashboardPage').style.display = 'block';
+    document.getElementById('loansPage').style.display = 'block';
+    document.getElementById('withdrawalsPage').style.display = 'block';
+    document.getElementById('backupPage').style.display = 'block';
+  } else {
+    document.getElementById('setupForm').style.display = 'flex';
+    document.getElementById('setupSummary').style.display = 'none';
+    document.getElementById('dashboardPage').style.display = 'none';
+    document.getElementById('loansPage').style.display = 'none';
+    document.getElementById('withdrawalsPage').style.display = 'none';
+    document.getElementById('backupPage').style.display = 'none';
+    return;
+  }
+
+  const t = computeTotals();
+  document.getElementById('statCapital').textContent = fmt(state.startCapital);
+  document.getElementById('statOutOnLoan').textContent = fmt(t.totalLentPrincipal);
+  document.getElementById('statAvailable').textContent = fmt(t.available);
+  document.getElementById('statRepaid').textContent = fmt(t.totalRepaid);
+  document.getElementById('statOwed').textContent = fmt(t.totalOwed);
+  document.getElementById('statWithdrawn').textContent = fmt(t.totalWithdrawn);
+  document.getElementById('statNetWorth').textContent = fmt(t.netWorth);
+
+  // loans
+  const list = document.getElementById('loansList');
+  const empty = document.getElementById('loansEmpty');
+  list.innerHTML = '';
+  const sortedLoans = [...state.loans].sort((a,b) => new Date(b.date) - new Date(a.date));
+  if (sortedLoans.length === 0) {
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    sortedLoans.forEach(loan => {
+      const owed = loanOwed(loan);
+      const paid = loanPaid(loan);
+      const outstanding = loanOutstanding(loan);
+      let stampClass = 'outstanding', stampText = 'Outstanding';
+      if (outstanding <= 0.004) { stampClass = 'paid'; stampText = 'Paid in full'; }
+      else if (paid > 0) { stampClass = 'partial'; stampText = 'Partly paid'; }
+
+      const interestLabel = loan.interestType === 'none' ? 'No interest'
+        : loan.interestType === 'flat' ? (loan.rate + '% one-time')
+        : loan.rate + '% per month';
+
+      const div = document.createElement('div');
+      div.className = 'loan-entry';
+      div.innerHTML = `
+        <div class="loan-head">
+          <div>
+            <div class="loan-who">${escapeHtml(loan.name)}</div>
+            <div class="loan-meta">Lent ${loan.date} · ${interestLabel}${loan.note ? ' · ' + escapeHtml(loan.note) : ''}</div>
+          </div>
+          <div class="stamp ${stampClass}">${stampText}</div>
+        </div>
+        <div class="loan-figures">
+          <div class="fig"><div class="flabel">Lent</div><div class="fval">${fmt(loan.amount)}</div></div>
+          <div class="fig"><div class="flabel">Owed back</div><div class="fval">${fmt(owed)}</div></div>
+          <div class="fig"><div class="flabel">Paid so far</div><div class="fval" style="color:var(--money-in)">${fmt(paid)}</div></div>
+          <div class="fig"><div class="flabel">Still owed</div><div class="fval" style="color:${outstanding > 0.004 ? 'var(--money-out)' : 'var(--money-in)'}">${fmt(outstanding)}</div></div>
+        </div>
+        ${loan.payments.length ? `
+        <div class="subledger">
+          ${loan.payments.map(p => `
+            <div class="subledger-row">
+              <span>${p.date}${p.note ? ' — ' + escapeHtml(p.note) : ''}</span>
+              <span class="amt pos">+${fmt(p.amount)} <span onclick="removePayment('${loan.id}','${p.id}')" style="cursor:pointer;opacity:0.5;">✕</span></span>
+            </div>`).join('')}
+        </div>` : ''}
+        <div class="loan-actions">
+          <button class="ghost small" onclick="toggleLoanForm('${loan.id}','payForm')">+ Record payment</button>
+          <button class="danger small" onclick="removeLoan('${loan.id}')">Delete loan</button>
+        </div>
+        <div class="inline-form" id="payForm-${loan.id}">
+          <div class="field"><label>Date paid</label><input type="date" id="payDate-${loan.id}"></div>
+          <div class="field"><label>Amount paid</label><input type="number" id="payAmount-${loan.id}" placeholder="500" style="min-width:100px"></div>
+          <div class="field"><label>Note (optional)</label><input type="text" id="payNote-${loan.id}" placeholder="partial payment"></div>
+          <button class="small" onclick="addPayment('${loan.id}')">Save payment</button>
+        </div>
+      `;
+      list.appendChild(div);
+    });
+  }
+
+  // withdrawals
+  const wList = document.getElementById('withdrawalsList');
+  const wEmpty = document.getElementById('withdrawalsEmpty');
+  wList.innerHTML = '';
+  const sortedW = [...state.withdrawals].sort((a,b) => new Date(b.date) - new Date(a.date));
+  if (sortedW.length === 0) {
+    wEmpty.style.display = 'block';
+  } else {
+    wEmpty.style.display = 'none';
+    sortedW.forEach(w => {
+      const row = document.createElement('div');
+      row.className = 'withdrawal-row';
+      row.innerHTML = `
+        <span>${escapeHtml(w.reason)}<br><span class="meta">${w.date}</span></span>
+        <span class="amt">-${fmt(w.amount)} <span onclick="removeWithdrawal('${w.id}')" style="cursor:pointer;opacity:0.5;font-size:11px;">✕</span></span>
+      `;
+      wList.appendChild(row);
+    });
+  }
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+load();
+</script>
+</body>
+</html>
