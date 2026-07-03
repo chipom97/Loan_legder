@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#5C1F2E">
 <title>The Ledger</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap');
@@ -111,7 +113,7 @@
     flex-wrap: wrap;
     align-items: flex-end;
   }
-  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 140px; min-width: 0; }
   .field label {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 10.5px;
@@ -121,23 +123,25 @@
   }
   input, select {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 14px;
-    padding: 9px 10px;
+    font-size: 16px;
+    padding: 11px 12px;
     border: 1px solid var(--paper-line);
     border-radius: 2px;
     background: #fffdf8;
     color: var(--ink);
     outline: none;
+    width: 100%;
   }
   input:focus, select:focus { border-color: var(--gold); }
-  input[type="text"], input[type="number"], input[type="date"] { min-width: 140px; }
+  input[type="text"], input[type="number"], input[type="date"] { min-width: 0; }
 
   button {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 12px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    padding: 10px 16px;
+    padding: 13px 18px;
+    min-height: 44px;
     border-radius: 2px;
     border: 1px solid var(--cover);
     background: var(--cover);
@@ -152,7 +156,7 @@
     color: var(--cover);
   }
   button.ghost:hover { background: rgba(92,31,46,0.08); }
-  button.small { padding: 6px 10px; font-size: 10.5px; }
+  button.small { padding: 9px 12px; min-height: 38px; font-size: 10.5px; }
   button.danger { border-color: var(--money-out); color: var(--money-out); background: transparent; }
   button.danger:hover { background: var(--money-out-bg); }
 
@@ -315,11 +319,42 @@
     letter-spacing: 0.05em;
   }
 
-  @media (max-width: 520px) {
+  @media (max-width: 640px) {
+    body { padding: 16px 10px 48px; }
     .page { padding: 22px 14px 26px; }
-    .page::before { left: 30px; }
-    .page-inner { margin-left: 18px; }
+    .page::before { left: 26px; }
+    .page-inner { margin-left: 16px; }
     .cover-title h1 { font-size: 24px; }
+    .cover-title .eyebrow { font-size: 10px; letter-spacing: 0.28em; }
+
+    h2.section-title { font-size: 11px; letter-spacing: 0.16em; }
+
+    /* every field spans the full row so nothing is cramped */
+    .field { flex: 1 1 100%; }
+
+    /* buttons go full-width and stack, easy to tap */
+    .setup-row { flex-direction: column; align-items: stretch; }
+    .setup-row button { width: 100%; }
+    .inline-form { flex-direction: column; align-items: stretch; }
+    .inline-form button { width: 100%; }
+
+    /* small buttons inside a loan card sit side by side but stay tappable */
+    .loan-actions { gap: 8px; }
+    .loan-actions button { flex: 1 1 auto; }
+
+    /* summary stats: two columns instead of many tiny ones */
+    .ledger-summary { grid-template-columns: 1fr 1fr; }
+    .stat .value { font-size: 17px; }
+
+    .loan-figures { grid-template-columns: 1fr 1fr; }
+    .loan-who { font-size: 17px; }
+    .stamp { font-size: 10px; padding: 4px 8px; }
+  }
+
+  @media (max-width: 380px) {
+    .ledger-summary { grid-template-columns: 1fr; }
+    .page-inner { margin-left: 12px; }
+    .page::before { left: 22px; }
   }
 </style>
 </head>
@@ -753,7 +788,7 @@ function render() {
           ${loan.payments.map(p => `
             <div class="subledger-row">
               <span>${p.date}${p.note ? ' — ' + escapeHtml(p.note) : ''}</span>
-              <span class="amt pos">+${fmt(p.amount)} <span onclick="removePayment('${loan.id}','${p.id}')" style="cursor:pointer;opacity:0.5;">✕</span></span>
+              <span class="amt pos">+${fmt(p.amount)} <span onclick="removePayment('${loan.id}','${p.id}')" style="cursor:pointer;opacity:0.55;display:inline-block;padding:4px 8px;font-size:15px;" title="Delete this payment">✕</span></span>
             </div>`).join('')}
         </div>` : ''}
         <div class="loan-actions">
@@ -785,7 +820,7 @@ function render() {
       row.className = 'withdrawal-row';
       row.innerHTML = `
         <span>${escapeHtml(w.reason)}<br><span class="meta">${w.date}</span></span>
-        <span class="amt">-${fmt(w.amount)} <span onclick="removeWithdrawal('${w.id}')" style="cursor:pointer;opacity:0.5;font-size:11px;">✕</span></span>
+        <span class="amt">-${fmt(w.amount)} <span onclick="removeWithdrawal('${w.id}')" style="cursor:pointer;opacity:0.55;display:inline-block;padding:4px 8px;font-size:15px;" title="Delete">✕</span></span>
       `;
       wList.appendChild(row);
     });
